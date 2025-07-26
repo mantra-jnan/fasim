@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SECS/GEM Simulator</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1c2e 0%, #2d3047 100%);
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 60px;
+            bottom: 0;
+            width: 300px;
+            background: rgba(255, 255, 255, 0.98);
+            border-right: 1px solid rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-300px);
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            right: -40px;
+            top: 20px;
+            background: white;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 0 8px 8px 0;
+            padding: 8px;
+            cursor: pointer;
+            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+        }
+
+        .tree-view {
+            font-size: 14px;
+        }
+
+        .tree-item {
+            margin: 4px 0;
+        }
+
+        .tree-group {
+            margin-bottom: 16px;
+        }
+
+        .tree-header {
+            font-weight: 600;
+            color: #1a1c2e;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .tree-header:hover {
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .tree-header.active {
+            background-color: rgba(79, 70, 229, 0.15);
+            color: #4f46e5;
+        }
+
+        .tree-content {
+            margin-left: 24px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .tree-content.expanded {
+            max-height: 2000px;
+        }
+
+        .tree-item a {
+            color: #4a5568;
+            text-decoration: none;
+            display: block;
+            padding: 6px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .tree-item a:hover {
+            background-color: rgba(79, 70, 229, 0.1);
+            color: #4f46e5;
+        }
+
+        .top-navbar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 1000;
+            box-sizing: border-box;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .navbar-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1a1c2e;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 200px;
+        }
+
+        .navbar-stats {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .navbar-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #4a5568;
+            font-size: 0.85rem;
+        }
+
+        .navbar-stat .material-symbols-outlined {
+            font-size: 18px;
+            color: #6366f1;
+        }
+
+        .navbar-stat .stat-value {
+            font-weight: 500;
+            color: #1a1c2e;
+        }
+
+        .navbar-stat .stat-label {
+            color: #6b7280;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .navbar-stat .status-indicator {
+            width: 8px;
+            height: 8px;
+            margin-left: 4px;
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: #5a6474;
+            min-width: 200px;
+            justify-content: flex-end;
+        }
+
+        .navbar-actions .material-symbols-outlined {
+            cursor: pointer;
+            transition: color 0.2s;
+            font-size: 24px;
+        }
+
+        .navbar-actions .material-symbols-outlined:hover {
+            color: #1a1c2e;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin-left: 300px;
+            padding: 32px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .container.sidebar-collapsed {
+            margin-left: 0;
+        }
+
+        .main-panel {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            backdrop-filter: blur(20px);
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 40px;
+            align-items: start;
+        }
+
+        .connection-section, .message-section {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .message-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+
+        .message-section.standard-tests {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            color: #1a1c2e;
+            padding-bottom: 12px;
+            position: relative;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #4f46e5, #6366f1);
+            border-radius: 3px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 0.9rem;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e0e4e8;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+            color: #1a1c2e;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+            background: #ffffff;
+        }
+
+        button {
+            background: linear-gradient(45deg, #4f46e5, #6366f1);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 5px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.4);
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .connected { background-color: #28a745; }
+        .disconnected { background-color: #dc3545; }
+        .connecting { background-color: #ffc107; }
+
+        .log-section {
+            margin-top: 30px;
+        }
+
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .log-header .section-title {
+            margin-bottom: 0;
+        }
+
+        .log-header button {
+            margin: 0;
+            padding: 10px 20px;
+            font-size: 13px;
+            background: #6c757d;
+        }
+
+        .log-header button:hover {
+            background: #5a6268;
+        }
+
+        .log-container {
+            background: #1a1c2e;
+            color: #a5f3fc;
+            padding: 24px;
+            border-radius: 12px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+
+        .log-entry:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .log-timestamp {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .log-send {
+            color: #ffc107;
+        }
+
+        .log-receive {
+            color: #28a745;
+        }
+
+        .log-error {
+            color: #dc3545;
+        }
+
+        .log-info {
+            color: #17a2b8;
+        }
+
+        .message-tabs {
+            display: flex;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            background: #e9ecef;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .secs-message-builder {
+            background: #fff;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .secs-message-builder .form-group:last-child {
+            grid-column: 1 / -1;
+        }
+
+        .secs-message-builder .message-preview {
+            grid-column: 1 / -1;
+            margin-bottom: 16px;
+        }
+
+        .secs-message-builder .button-group {
+            grid-column: 1 / -1;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .message-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .quick-tests {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+            align-items: stretch;
+        }
+
+        .test-button {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 80px;
+            padding: 12px;
+            width: 100%;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .test-button:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .test-button {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px; /* Reduced gap */
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            color: white;
+            padding: 16px; /* Reduced padding */
+            border-radius: 12px; /* Smaller radius */
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.15);
+            transition: transform 0.2s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 28px; /* Smaller font size */
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 13px; /* Smaller font size */
+            font-weight: 500;
+            opacity: 0.9;
+            letter-spacing: 0.5px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 0;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 550px;
+            border-radius: 16px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-header {
+            padding: 16px 24px;
+            background: #4f46e5;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .modal-close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover,
+        .modal-close:focus {
+            color: white;
+            text-decoration: none;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0; transform: scale(0.95);}
+            to {opacity: 1; transform: scale(1);}
+        }
+    </style>
+</head>
+<body>
+    <header class="top-navbar">
+        <div class="navbar-title">
+            <span>🔌</span>
+            <span>SECS/GEM Simulator</span>
+        </div>
+        <div class="navbar-stats">
+            <div class="navbar-stat">
+                <span class="material-symbols-outlined">upload</span>
+                <span class="stat-value" id="messagesSent">0</span>
+                <span class="stat-label">Sent</span>
+            </div>
+            <div class="navbar-stat">
+                <span class="material-symbols-outlined">download</span>
+                <span class="stat-value" id="messagesReceived">0</span>
+                <span class="stat-label">Received</span>
+            </div>
+            <div class="navbar-stat">
+                <span class="material-symbols-outlined">timer</span>
+                <span class="stat-value" id="connectionTime">00:00</span>
+                <span class="stat-label">Connected</span>
+            </div>
+            <div class="navbar-stat">
+                <span class="material-symbols-outlined">sensors</span>
+                <span class="stat-value" id="connectionStatus">Disconnected</span>
+                <span class="status-indicator disconnected"></span>
+            </div>
+        </div>
+        <div class="navbar-actions">
+            <span class="material-symbols-outlined" title="Connection Settings" id="openConnectionModalBtn">power</span>
+            <span class="material-symbols-outlined" title="Settings">settings</span>
+            <span class="material-symbols-outlined" title="Help">help_outline</span>
+            <span class="material-symbols-outlined" title="Account">account_circle</span>
+        </div>
+    </header>
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <button class="sidebar-toggle" onclick="toggleSidebar()">
+            <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+        
+        <div class="tree-view">
+            <!-- Streams and Functions -->
+            <div class="tree-group">
+                <div class="tree-header" onclick="toggleTreeGroup(this)">
+                    <span class="material-symbols-outlined">expand_more</span>
+                    <span>Streams and Functions</span>
+                </div>
+                <div class="tree-content">
+                    <div class="tree-item"><a href="#" onclick="setMessage('S1F1')">S1F1 - Are You There</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S1F3')">S1F3 - Selected Equipment Status</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S1F11')">S1F11 - Status Variable Request</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S1F13')">S1F13 - Establish Communications</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S1F15')">S1F15 - Request OFF-LINE</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S1F17')">S1F17 - Request ON-LINE</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S2F13')">S2F13 - Equipment Constant Request</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S2F15')">S2F15 - New Equipment Constant</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S2F31')">S2F31 - Date and Time Set Request</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S2F37')">S2F37 - Enable/Disable Event Report</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S2F41')">S2F41 - Host Command Send</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S5F3')">S5F3 - Enable/Disable Alarm</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S5F5')">S5F5 - List Alarms Request</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S5F6')">S5F6 - List Alarms Data</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S6F15')">S6F15 - Event Report Request</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S7F5')">S7F5 - Process Program Request</a></div>
+                    <div class="tree-item"><a href="#" onclick="setMessage('S7F19')">S7F19 - Current EPPD Request</a></div>
+                </div>
+            </div>
+
+            <!-- Reports -->
+            <div class="tree-group">
+                <div class="tree-header" onclick="toggleTreeGroup(this)">
+                    <span class="material-symbols-outlined">expand_more</span>
+                    <span>Reports</span>
+                </div>
+                <div class="tree-content">
+                    <div class="tree-item"><a href="#" onclick="selectReport('10001')">Process Start Report</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectReport('10002')">Process End Report</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectReport('10003')">Step Start Report</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectReport('10004')">Step End Report</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectReport('10005')">Wafer Start Report</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectReport('10006')">Wafer End Report</a></div>
+                </div>
+            </div>
+
+            <!-- Alarms -->
+            <div class="tree-group">
+                <div class="tree-header" onclick="toggleTreeGroup(this)">
+                    <span class="material-symbols-outlined">expand_more</span>
+                    <span>Alarms</span>
+                </div>
+                <div class="tree-content">
+                    <div class="tree-item"><a href="#" onclick="selectAlarm('50001')">RF Power Supply Fault</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectAlarm('50002')">Chamber Vacuum Leak</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectAlarm('40001')">Chamber Pressure High</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectAlarm('40002')">Chuck Temperature High</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectAlarm('30001')">New Recipe Loaded</a></div>
+                </div>
+            </div>
+
+            <!-- VIDs -->
+            <div class="tree-group">
+                <div class="tree-header" onclick="toggleTreeGroup(this)">
+                    <span class="material-symbols-outlined">expand_more</span>
+                    <span>VIDs</span>
+                </div>
+                <div class="tree-content">
+                    <div class="tree-item"><a href="#" onclick="selectVID('1001')">1001 - RF Power</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectVID('1002')">1002 - Pressure</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectVID('1003')">1003 - Temperature</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectVID('2001')">2001 - Chamber State</a></div>
+                    <div class="tree-item"><a href="#" onclick="selectVID('2002')">2002 - Pump Status</a></div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="container">
+        <div class="main-panel">
+            <div class="control-panel">
+                <!-- Message Section -->
+                <div class="message-section">
+                    <h3 class="section-title">Message Control</h3>
+                    
+                    <div class="message-tabs">
+                        <button class="tab active" onclick="switchTab('custom', event)">Custom Message</button>
+                        <button class="tab" onclick="switchTab('standard', event)">Standard Tests</button>
+                    </div>
+                    
+                    <div id="customTab" class="tab-content active">
+                        <div class="secs-message-builder">
+                            <div class="form-group">
+                                <label for="stream">Stream:</label>
+                                <input type="number" id="stream" value="1" min="1" max="127">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="function">Function:</label>
+                                <input type="number" id="function" value="1" min="1" max="255">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="wBit">W-Bit (Wait for Reply):</label>
+                                <select id="wBit">
+                                    <option value="true">True</option>
+                                    <option value="false">False</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="messageData">Message Data (JSON format):</label>
+                                <textarea id="messageData" rows="4" placeholder='{"MDLN": "Model123", "SOFTREV": "v1.0.0"}'></textarea>
+                            </div>
+                            
+                            <div class="message-preview" id="messagePreview">
+                                Message preview will appear here...
+                            </div>
+                            
+                            <div class="button-group">
+                                <button onclick="previewMessage()">Preview</button>
+                                <button onclick="sendCustomMessage()" id="sendCustomBtn" disabled>Send Message</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="standardTab" class="tab-content">
+                        <div class="quick-tests">
+                            <button class="test-button" onclick="sendStandardMessage('S1F1')" id="s1f1Btn" disabled>
+                                S1F1<br>Are You There
+                            </button>
+                            <button class="test-button" onclick="sendStandardMessage('S1F3')" id="s1f3Btn" disabled>
+                                S1F3<br>Selected Equipment Status
+                            </button>
+                            <button class="test-button" onclick="sendStandardMessage('S1F11')" id="s1f11Btn" disabled>
+                                S1F11<br>Status Variable Request
+                            </button>
+                            <button class="test-button" onclick="sendStandardMessage('S1F13')" id="s1f13Btn" disabled>
+                                S1F13<br>Establish Communications
+                            </button>
+                            <button class="test-button" onclick="sendStandardMessage('S2F13')" id="s2f13Btn" disabled>
+                                S2F13<br>Equipment Constant Request
+                            </button>
+                            <button class="test-button" onclick="sendStandardMessage('S2F15')" id="s2f15Btn" disabled>
+                                S2F15<br>New Equipment Constant
+                            </button>
+                            <button class="test-button" onclick="sendEtcherAlarm()" id="alarmBtn" disabled>
+                                S5F1<br>Send Etcher Alarm
+                            </button>
+                            <button class="test-button" onclick="sendEtcherReport()" id="reportBtn" disabled>
+                                S6F11<br>Send Process Report
+                            </button>
+                        </div>
+                        
+                        <!-- Etcher-Specific Controls -->
+                        <div style="margin-top: 20px;">
+                            <h4 style="color: #495057; margin-bottom: 10px;">Etcher-Specific Tests</h4>
+                            
+                            <div class="form-group">
+                                <label for="vidSelect">Select VID for S1F11 Request:</label>
+                                <select id="vidSelect" multiple style="height: 100px;">
+                                    <optgroup label="Process Parameters">
+                                        <option value="1001">RF_POWER (1500 W)</option>
+                                        <option value="1002">PRESSURE (50.5 mTorr)</option>
+                                        <option value="1003">TEMPERATURE (65.2 °C)</option>
+                                        <option value="1004">GAS_FLOW_CF4 (45.0 sccm)</option>
+                                        <option value="1005">GAS_FLOW_O2 (15.0 sccm)</option>
+                                        <option value="1006">GAS_FLOW_AR (100.0 sccm)</option>
+                                        <option value="1007">ETCH_RATE (2.35 Å/s)</option>
+                                        <option value="1008">UNIFORMITY (2.1 %)</option>
+                                        <option value="1009">DC_BIAS (-285 V)</option>
+                                        <option value="1010">SELECTIVITY (15.2)</option>
+                                    </optgroup>
+                                    <optgroup label="Equipment Status">
+                                        <option value="2001" selected>CHAMBER_STATE</option>
+                                        <option value="2002" selected>PUMP_STATUS</option>
+                                        <option value="2003" selected>PLASMA_STATUS</option>
+                                        <option value="2004">WAFER_PRESENT</option>
+                                        <option value="2005">DOOR_STATUS</option>
+                                        <option value="2006">ESC_STATUS</option>
+                                        <option value="2007">RECIPE_NAME</option>
+                                        <option value="2008">LOT_ID</option>
+                                        <option value="2009">WAFER_ID</option>
+                                        <option value="2010">STEP_NUMBER</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="reportSelect">Select Report Type:</label>
+                                <select id="reportSelect">
+                                    <option value="10001">Process Start Report</option>
+                                    <option value="10002">Process End Report</option>
+                                    <option value="10003">Step Start Report</option>
+                                    <option value="10004">Step End Report</option>
+                                    <option value="10005">Wafer Start Report</option>
+                                    <option value="10006">Wafer End Report</option>
+                                    <option value="10007">Alarm Report</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="alarmSelect">Select Alarm Type:</label>
+                                <select id="alarmSelect">
+                                    <optgroup label="Critical Alarms">
+                                        <option value="50001">RF Power Supply Fault</option>
+                                        <option value="50002">Chamber Vacuum Leak</option>
+                                        <option value="50003">Turbo Pump Failure</option>
+                                        <option value="50004">Plasma Generation Fault</option>
+                                        <option value="50005">Electrostatic Chuck Fault</option>
+                                    </optgroup>
+                                    <optgroup label="Warning Alarms">
+                                        <option value="40001">Chamber Pressure High</option>
+                                        <option value="40002">Chuck Temperature High</option>
+                                        <option value="40003">Gas Flow Below Setpoint</option>
+                                        <option value="40004">Etch Rate Below Expected</option>
+                                        <option value="40005">Etch Uniformity Out of Spec</option>
+                                        <option value="40006">DC Bias Voltage High</option>
+                                    </optgroup>
+                                    <optgroup label="Information Alarms">
+                                        <option value="30001">New Recipe Loaded</option>
+                                        <option value="30002">Wafer Loaded Successfully</option>
+                                        <option value="30003">Preventive Maintenance Due</option>
+                                        <option value="30004">Process Gas Supply Low</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Log Section -->
+            <div class="log-section">
+                <div class="log-header">
+                    <h3 class="section-title">Communication Log</h3>
+                    <button onclick="clearLog()">Clear Log</button>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry log-info">
+                        <span class="log-timestamp">[00:00:00]</span> SECS/GEM Simulator initialized
+                    </div>
+                    <div class="log-entry log-info">
+                        <span class="log-timestamp">[00:00:00]</span> Ready to establish connection...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connection Modal -->
+    <div id="connectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Connection Settings</h3>
+                <span class="modal-close" id="closeConnectionModalBtn">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="connectionMode">Connection Mode:</label>
+                    <select id="connectionMode">
+                        <option value="host">Host (Active)</option>
+                        <option value="equipment">Equipment (Passive)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ipAddress">IP Address:</label>
+                    <input type="text" id="ipAddress" value="192.168.1.100" placeholder="Equipment IP Address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="port">Port:</label>
+                    <input type="number" id="port" value="5000" placeholder="5000">
+                </div>
+                
+                <div class="form-group">
+                    <label for="deviceId">Device ID:</label>
+                    <input type="number" id="deviceId" value="1" placeholder="1" min="0" max="32767">
+                </div>
+                
+                <div class="form-group">
+                    <label for="t3Timeout">T3 Timeout (Reply Timeout):</label>
+                    <input type="number" id="t3Timeout" value="45" placeholder="45 seconds">
+                </div>
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button id="connectBtn" onclick="toggleConnection()">
+                        <span class="status-indicator disconnected" id="statusIndicator"></span>
+                        Connect
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sidebar functions
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const container = document.querySelector('.container');
+            const toggleBtn = document.querySelector('.sidebar-toggle .material-symbols-outlined');
+            
+            sidebar.classList.toggle('collapsed');
+            container.classList.toggle('sidebar-collapsed');
+            
+            // Update toggle button icon
+            toggleBtn.textContent = sidebar.classList.contains('collapsed') ? 'chevron_left' : 'chevron_right';
+        }
+
+        function toggleTreeGroup(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.material-symbols-outlined');
+            
+            content.classList.toggle('expanded');
+            icon.textContent = content.classList.contains('expanded') ? 'expand_less' : 'expand_more';
+            header.classList.toggle('active');
+        }
+
+        function setMessage(type) {
+            switchTab('custom'); // Ensure the correct tab is visible
+
+            // SEMI-compliant message templates
+            const messageTemplates = {
+                'S1F1':  { s: 1,  f: 1,  w: true, data: null },
+                'S1F3':  { s: 1,  f: 3,  w: true, data: { "SVID": [1001, 2001, 2007] } },
+                'S1F11': { s: 1,  f: 11, w: true, data: { "SVID": [1001, 1002, 1003] } },
+                'S1F13': { s: 1,  f: 13, w: true, data: { "MDLN": "HostSystem", "SOFTREV": "1.0" } },
+                'S1F15': { s: 1,  f: 15, w: true, data: null },
+                'S1F17': { s: 1,  f: 17, w: true, data: null },
+                'S2F13': { s: 2,  f: 13, w: true, data: { "ECID": [1, 2, 3] } },
+                'S2F15': { s: 2,  f: 15, w: true, data: { "ECID": [1], "ECV": ["NewValue"] } },
+                'S2F31': { s: 2,  f: 31, w: true, data: { "TIME": new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14) } },
+                'S2F37': { s: 2,  f: 37, w: true, data: { "CEED": true, "CEID": [10001, 10002] } },
+                'S2F41': { s: 2,  f: 41, w: true, data: { "RCMD": "START", "PARAMS": [{ "CPNAME": "recipe", "CPVAL": "etch_recipe.rcp" }] } },
+                'S5F3':  { s: 5,  f: 3,  w: true, data: { "ALED": true, "ALID": [50001, 40001] } },
+                'S5F5':  { s: 5,  f: 5,  w: true, data: null },
+                'S5F6':  { s: 5,  f: 6,  w: false, data: { "ALID": [50001, 40001, 30001] } },
+                'S6F15': { s: 6,  f: 15, w: true, data: { "CEID": [10001, 10002] } },
+                'S7F5':  { s: 7,  f: 5,  w: true, data: { "PPID": "etch_recipe.rcp" } },
+                'S7F19': { s: 7,  f: 19, w: true, data: { "PPID": "etch_recipe.rcp" } }
+            };
+
+            const template = messageTemplates[type];
+
+            if (template) {
+                document.getElementById('stream').value = template.s;
+                document.getElementById('function').value = template.f;
+                document.getElementById('wBit').value = template.w.toString();
+                document.getElementById('messageData').value = template.data ? JSON.stringify(template.data, null, 4) : '';
+                previewMessage();
+            } else {
+                // Fallback for any messages not in the template
+                const match = type.match(/S(\d+)F(\d+)/);
+                if (match) {
+                    document.getElementById('stream').value = match[1];
+                    document.getElementById('function').value = match[2];
+                    document.getElementById('wBit').value = 'true';
+                    document.getElementById('messageData').value = '';
+                    previewMessage();
+                }
+            }
+        }
+
+        function selectReport(reportId) {
+            switchTab('standard');
+            document.getElementById('reportSelect').value = reportId;
+        }
+
+        function selectAlarm(alarmId) {
+            switchTab('standard');
+            document.getElementById('alarmSelect').value = alarmId;
+        }
+
+        function selectVID(vidId) {
+            const vidSelect = document.getElementById('vidSelect');
+            // Deselect all options first
+            Array.from(vidSelect.options).forEach(opt => opt.selected = false);
+            // Select the specified VID
+            const option = Array.from(vidSelect.options).find(opt => opt.value === vidId);
+            if (option) {
+                option.selected = true;
+            }
+        }
+
+        // Initialize all tree groups as collapsed
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.tree-header').forEach(header => {
+                header.querySelector('.material-symbols-outlined').textContent = 'expand_more';
+            });
+
+            // Modal control
+            const modal = document.getElementById('connectionModal');
+            const openBtn = document.getElementById('openConnectionModalBtn');
+            const closeBtn = document.getElementById('closeConnectionModalBtn');
+
+            openBtn.onclick = function() {
+                modal.style.display = "flex";
+            }
+
+            closeBtn.onclick = function() {
+                modal.style.display = "none";
+            }
+
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        });
+
+    </script>
+    <script>
+        // Global state
+        let isConnected = false;
+        let connectionStartTime = null;
+        let connectionTimer = null;
+        let messagesSent = 0;
+        let messagesReceived = 0;
+        let systemId = 0;
+        let mockSocket = null;
+        
+        // Etcher-specific data
+        const etcherVIDs = {
+            // Process Parameters
+            1001: { name: "RF_POWER", value: 1500, unit: "W", description: "RF Power Level" },
+            1002: { name: "PRESSURE", value: 50.5, unit: "mTorr", description: "Chamber Pressure" },
+            1003: { name: "TEMPERATURE", value: 65.2, unit: "°C", description: "Chuck Temperature" },
+            1004: { name: "GAS_FLOW_CF4", value: 45.0, unit: "sccm", description: "CF4 Gas Flow" },
+            1005: { name: "GAS_FLOW_O2", value: 15.0, unit: "sccm", description: "O2 Gas Flow" },
+            1006: { name: "GAS_FLOW_AR", value: 100.0, unit: "sccm", description: "Argon Gas Flow" },
+            1007: { name: "ETCH_RATE", value: 2.35, unit: "Å/s", description: "Etch Rate" },
+            1008: { name: "UNIFORMITY", value: 2.1, unit: "%", description: "Etch Uniformity" },
+            1009: { name: "DC_BIAS", value: -285, unit: "V", description: "DC Bias Voltage" },
+            1010: { name: "SELECTIVITY", value: 15.2, unit: "", description: "Etch Selectivity" },
+            
+            // Equipment Status
+            2001: { name: "CHAMBER_STATE", value: "PROCESSING", unit: "", description: "Chamber State" },
+            2002: { name: "PUMP_STATUS", value: "RUNNING", unit: "", description: "Turbo Pump Status" },
+            2003: { name: "PLASMA_STATUS", value: "ON", unit: "", description: "Plasma Status" },
+            2004: { name: "WAFER_PRESENT", value: "TRUE", unit: "", description: "Wafer Present" },
+            2005: { name: "DOOR_STATUS", value: "CLOSED", unit: "", description: "Chamber Door Status" },
+            2006: { name: "ESC_STATUS", value: "CLAMPED", unit: "", description: "Electrostatic Chuck Status" },
+            2007: { name: "RECIPE_NAME", value: "OXIDE_ETCH_V2.1", unit: "", description: "Current Recipe" },
+            2008: { name: "LOT_ID", value: "LOT_2024_0726_001", unit: "", description: "Current Lot ID" },
+            2009: { name: "WAFER_ID", value: "W001", unit: "", description: "Current Wafer ID" },
+            2010: { name: "STEP_NUMBER", value: 3, unit: "", description: "Current Recipe Step" }
+        };
+        
+        const etcherReports = {
+            // Process Reports
+            10001: {
+                name: "PROCESS_START_REPORT",
+                description: "Process Start Report",
+                vids: [2007, 2008, 2009, 1001, 1002, 1003],
+                ceid: 10001
+            },
+            10002: {
+                name: "PROCESS_END_REPORT", 
+                description: "Process End Report",
+                vids: [2007, 2008, 2009, 1007, 1008, 1010],
+                ceid: 10002
+            },
+            10003: {
+                name: "STEP_START_REPORT",
+                description: "Recipe Step Start Report", 
+                vids: [2010, 1001, 1002, 1003],
+                ceid: 10003
+            },
+            10004: {
+                name: "STEP_END_REPORT",
+                description: "Recipe Step End Report",
+                vids: [2010, 1007, 1008, 1009],
+                ceid: 10004
+            },
+            10005: {
+                name: "WAFER_START_REPORT",
+                description: "Wafer Processing Start",
+                vids: [2009, 2007, 2001],
+                ceid: 10005
+            },
+            10006: {
+                name: "WAFER_END_REPORT", 
+                description: "Wafer Processing Complete",
+                vids: [2009, 1007, 1008, 1010],
+                ceid: 10006
+            },
+            10007: {
+                name: "ALARM_REPORT",
+                description: "Equipment Alarm Report",
+                vids: [2001, 2002, 2003, 2005],
+                ceid: 10007
+            }
+        };
+        
+        const etcherAlarms = {
+            // Critical Alarms
+            50001: { severity: "CRITICAL", name: "RF_POWER_FAULT", description: "RF Power Supply Fault", category: "PROCESS" },
+            50002: { severity: "CRITICAL", name: "CHAMBER_LEAK", description: "Chamber Vacuum Leak Detected", category: "SAFETY" },
+            50003: { severity: "CRITICAL", name: "PUMP_FAILURE", description: "Turbo Pump Failure", category: "EQUIPMENT" },
+            50004: { severity: "CRITICAL", name: "PLASMA_FAULT", description: "Plasma Generation Fault", category: "PROCESS" },
+            50005: { severity: "CRITICAL", name: "ESC_FAULT", description: "Electrostatic Chuck Fault", category: "EQUIPMENT" },
+            
+            // Warning Alarms  
+            40001: { severity: "WARNING", name: "PRESSURE_HIGH", description: "Chamber Pressure Above Limit", category: "PROCESS" },
+            40002: { severity: "WARNING", name: "TEMPERATURE_HIGH", description: "Chuck Temperature High", category: "PROCESS" },
+            40003: { severity: "WARNING", name: "GAS_FLOW_LOW", description: "Gas Flow Below Setpoint", category: "PROCESS" },
+            40004: { severity: "WARNING", name: "ETCH_RATE_LOW", description: "Etch Rate Below Expected", category: "PROCESS" },
+            40005: { severity: "WARNING", name: "UNIFORMITY_POOR", description: "Etch Uniformity Out of Spec", category: "PROCESS" },
+            40006: { severity: "WARNING", name: "DC_BIAS_HIGH", description: "DC Bias Voltage High", category: "PROCESS" },
+            
+            // Information Alarms
+            30001: { severity: "INFO", name: "RECIPE_LOADED", description: "New Recipe Loaded", category: "OPERATION" },
+            30002: { severity: "INFO", name: "WAFER_LOADED", description: "Wafer Loaded Successfully", category: "OPERATION" },
+            30003: { severity: "INFO", name: "MAINTENANCE_DUE", description: "Preventive Maintenance Due", category: "MAINTENANCE" },
+            30004: { severity: "INFO", name: "CONSUMABLE_LOW", description: "Process Gas Supply Low", category: "MAINTENANCE" }
+        };
+        
+        // Mock WebSocket for simulation
+        class MockSocket {
+            constructor(url) {
+                this.url = url;
+                this.readyState = 0; // CONNECTING
+                this.onopen = null;
+                this.onmessage = null;
+                this.onclose = null;
+                this.onerror = null;
+                
+                // Simulate connection
+                setTimeout(() => {
+                    this.readyState = 1; // OPEN
+                    if (this.onopen) this.onopen();
+                }, 1000);
+            }
+            
+            send(data) {
+                // Simulate equipment responses
+                setTimeout(() => {
+                    this.simulateResponse(data);
+                }, Math.random() * 1000 + 500);
+            }
+            
+            simulateResponse(originalMessage) {
+                try {
+                    const msg = JSON.parse(originalMessage);
+                    let response = null;
+                    
+                    // Generate appropriate responses based on message type
+                    switch(`S${msg.stream}F${msg.function}`) {
+                        case 'S1F1':
+                            response = {
+                                stream: 1, function: 2, wBit: false, systemId: msg.systemId,
+                                data: {"MDLN": "Etcher_Model_EX300", "SOFTREV": "v3.2.1"}
+                            };
+                            break;
+                        case 'S1F3':
+                            response = {
+                                stream: 1, function: 4, wBit: false, systemId: msg.systemId,
+                                data: {"SVID": [2001, 2002, 2003], "SV": ["PROCESSING", "RUNNING", "ON"]}
+                            };
+                            break;
+                        case 'S1F11':
+                            // Status Variable Request - return etcher VIDs
+                            const requestedVids = msg.data?.SVID || [1001, 1002, 1003, 2001, 2002];
+                            const svNames = requestedVids.map(vid => etcherVIDs[vid]?.name || `VID_${vid}`);
+                            const svValues = requestedVids.map(vid => {
+                                const vidData = etcherVIDs[vid];
+                                return vidData ? `${vidData.value}${vidData.unit ? ' ' + vidData.unit : ''}` : 'N/A';
+                            });
+                            response = {
+                                stream: 1, function: 12, wBit: false, systemId: msg.systemId,
+                                data: {"SVID": requestedVids, "SVNAME": svNames, "SV": svValues}
+                            };
+                            break;
+                        case 'S1F13':
+                            response = {
+                                stream: 1, function: 14, wBit: false, systemId: msg.systemId,
+                                data: {"COMMACK": 0, "MDLN": "Etcher_EX300", "SOFTREV": "v3.2.1"}
+                            };
+                            break;
+                        case 'S2F13':
+                            // Equipment Constant Request
+                            response = {
+                                stream: 2, function: 14, wBit: false, systemId: msg.systemId,
+                                data: {"ECV": ["2.5", "100", "OXIDE_ETCH"], "ECID": [1, 2, 3]}
+                            };
+                            break;
+                        case 'S5F1':
+                            // Alarm Report - acknowledge
+                            response = {
+                                stream: 5, function: 2, wBit: false, systemId: msg.systemId,
+                                data: {"ACKC5": 0}
+                            };
+                            break;
+                        case 'S6F11':
+                            // Event Report - acknowledge  
+                            response = {
+                                stream: 6, function: 12, wBit: false, systemId: msg.systemId,
+                                data: {"ACKC6": 0}
+                            };
+                            break;
+                        default:
+                            response = {
+                                stream: msg.stream, function: msg.function + 1, wBit: false, systemId: msg.systemId,
+                                data: {"ACK": 0}
+                            };
+                    }
+                    
+                    if (response && this.onmessage) {
+                        this.onmessage({data: JSON.stringify(response)});
+                    }
+                } catch (e) {
+                    console.error('Error processing response:', e);
+                }
+            }
+            
+            close() {
+                this.readyState = 3; // CLOSED
+                if (this.onclose) this.onclose();
+            }
+        }
+        
+        function addLogEntry(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${message}`;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function updateStats() {
+            document.getElementById('messagesSent').textContent = messagesSent;
+            document.getElementById('messagesReceived').textContent = messagesReceived;
+            document.getElementById('connectionStatus').textContent = isConnected ? 'Connected' : 'Disconnected';
+        }
+        
+        function updateConnectionTime() {
+            if (connectionStartTime && isConnected) {
+                const elapsed = Math.floor((Date.now() - connectionStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('connectionTime').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        function toggleConnection() {
+            const connectBtn = document.getElementById('connectBtn');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            if (!isConnected) {
+                // Start connection
+                const ipAddress = document.getElementById('ipAddress').value;
+                const port = document.getElementById('port').value;
+                const mode = document.getElementById('connectionMode').value;
+                
+                addLogEntry(`Attempting to connect to ${ipAddress}:${port} as ${mode}...`, 'info');
+                
+                statusIndicator.className = 'status-indicator connecting';
+                connectBtn.textContent = 'Connecting...';
+                connectBtn.disabled = true;
+                
+                // Create mock connection
+                mockSocket = new MockSocket(`ws://${ipAddress}:${port}`);
+                
+                mockSocket.onopen = () => {
+                    isConnected = true;
+                    connectionStartTime = Date.now();
+                    connectionTimer = setInterval(updateConnectionTime, 1000);
+                    
+                    statusIndicator.className = 'status-indicator connected';
+                    connectBtn.textContent = 'Disconnect';
+                    connectBtn.disabled = false;
+                    
+                    // Enable message buttons
+                    const buttons = ['sendCustomBtn', 's1f1Btn', 's1f3Btn', 's1f11Btn', 's1f13Btn', 's2f13Btn', 's2f15Btn', 'alarmBtn', 'reportBtn'];
+                    buttons.forEach(id => {
+                        const btn = document.getElementById(id);
+                        if (btn) btn.disabled = false;
+                    });
+                    
+                    addLogEntry(`Successfully connected to ${ipAddress}:${port}`, 'info');
+                    updateStats();
+                };
+                
+                mockSocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        messagesReceived++;
+                        addLogEntry(`RECV: S${message.stream}F${message.function} - ${JSON.stringify(message.data)}`, 'receive');
+                        updateStats();
+                    } catch (e) {
+                        addLogEntry(`RECV: Invalid message format`, 'error');
+                    }
+                };
+                
+                mockSocket.onclose = () => {
+                    disconnect();
+                };
+                
+                mockSocket.onerror = (error) => {
+                    addLogEntry(`Connection error: ${error.message || 'Unknown error'}`, 'error');
+                    disconnect();
+                };
+                
+            } else {
+                // Disconnect
+                if (mockSocket) {
+                    mockSocket.close();
+                }
+                disconnect();
+            }
+        }
+        
+        function disconnect() {
+            isConnected = false;
+            connectionStartTime = null;
+            
+            if (connectionTimer) {
+                clearInterval(connectionTimer);
+                connectionTimer = null;
+            }
+            
+            const connectBtn = document.getElementById('connectBtn');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            statusIndicator.className = 'status-indicator disconnected';
+            connectBtn.textContent = 'Connect';
+            connectBtn.disabled = false;
+            
+            // Disable message buttons
+            const buttons = ['sendCustomBtn', 's1f1Btn', 's1f3Btn', 's1f11Btn', 's1f13Btn', 's2f13Btn', 's2f15Btn', 'alarmBtn', 'reportBtn'];
+            buttons.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) btn.disabled = true;
+            });
+            
+            addLogEntry('Connection closed', 'info');
+            updateStats();
+        }
+        
+        function switchTab(tabName, event) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Add active class to clicked tab
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+        
+        function previewMessage() {
+            const stream = document.getElementById('stream').value;
+            const func = document.getElementById('function').value;
+            const wBit = document.getElementById('wBit').value === 'true';
+            const dataStr = document.getElementById('messageData').value;
+            
+            let data = null;
+            try {
+                if (dataStr.trim()) {
+                    data = JSON.parse(dataStr);
+                }
+            } catch (e) {
+                document.getElementById('messagePreview').textContent = 'Invalid JSON format in message data';
+                return;
+            }
+            
+            const message = {
+                stream: parseInt(stream),
+                function: parseInt(func),
+                wBit: wBit,
+                systemId: ++systemId,
+                data: data
+            };
+            
+            document.getElementById('messagePreview').textContent = 
+                `S${stream}F${func} Message:\n${JSON.stringify(message, null, 2)}`;
+        }
+        
+        function sendCustomMessage() {
+            if (!isConnected) {
+                addLogEntry('Cannot send message: Not connected', 'error');
+                return;
+            }
+            
+            const stream = document.getElementById('stream').value;
+            const func = document.getElementById('function').value;
+            const wBit = document.getElementById('wBit').value === 'true';
+            const dataStr = document.getElementById('messageData').value;
+            
+            let data = null;
+            try {
+                if (dataStr.trim()) {
+                    data = JSON.parse(dataStr);
+                }
+            } catch (e) {
+                addLogEntry('Cannot send message: Invalid JSON format', 'error');
+                return;
+            }
+            
+            const message = {
+                stream: parseInt(stream),
+                function: parseInt(func),
+                wBit: wBit,
+                systemId: ++systemId,
+                data: data
+            };
+            
+            mockSocket.send(JSON.stringify(message));
+            messagesSent++;
+            addLogEntry(`SEND: S${stream}F${func} - ${JSON.stringify(data)}`, 'send');
+            updateStats();
+        }
+        
+        function sendStandardMessage(messageType) {
+            if (!isConnected) {
+                addLogEntry(`Cannot send ${messageType}: Not connected`, 'error');
+                return;
+            }
+            
+            const standardMessages = {
+                'S1F1': { stream: 1, function: 1, wBit: true, data: null },
+                'S1F3': { 
+                    stream: 1, function: 3, wBit: true, 
+                    data: {"SVID": [2001, 2002, 2003]} 
+                },
+                'S1F11': { 
+                    stream: 1, function: 11, wBit: true, 
+                    data: {"SVID": getSelectedVids()} 
+                },
+                'S1F13': { 
+                    stream: 1, function: 13, wBit: true, 
+                    data: {"MDLN": "Host_System", "SOFTREV": "v1.0"} 
+                },
+                'S2F13': { 
+                    stream: 2, function: 13, wBit: true, 
+                    data: {"ECID": [1, 2, 3]} 
+                },
+                'S2F15': { 
+                    stream: 2, function: 15, wBit: true, 
+                    data: {"ECID": [1], "ECV": ["NewValue"]} 
+                }
+            };
+            
+            const template = standardMessages[messageType];
+            if (!template) {
+                addLogEntry(`Unknown message type: ${messageType}`, 'error');
+                return;
+            }
+            
+            const message = {
+                ...template,
+                systemId: ++systemId
+            };
+            
+            mockSocket.send(JSON.stringify(message));
+            messagesSent++;
+            addLogEntry(`SEND: ${messageType} - ${JSON.stringify(template.data)}`, 'send');
+            updateStats();
+        }
+        
+        function getSelectedVids() {
+            const vidSelect = document.getElementById('vidSelect');
+            const selectedVids = Array.from(vidSelect.selectedOptions).map(option => parseInt(option.value));
+            return selectedVids.length > 0 ? selectedVids : [2001, 2002, 2003];
+        }
+        
+        function sendEtcherAlarm() {
+            if (!isConnected) {
+                addLogEntry('Cannot send alarm: Not connected', 'error');
+                return;
+            }
+            
+            const alarmSelect = document.getElementById('alarmSelect');
+            const alarmId = parseInt(alarmSelect.value);
+            const alarm = etcherAlarms[alarmId];
+            
+            if (!alarm) {
+                addLogEntry('Invalid alarm selected', 'error');
+                return;
+            }
+            
+            const message = {
+                stream: 5,
+                function: 1,
+                wBit: false,
+                systemId: ++systemId,
+                data: {
+                    "ALCD": alarm.severity === "CRITICAL" ? 1 : alarm.severity === "WARNING" ? 2 : 3,
+                    "ALID": alarmId,
+                    "ALTX": alarm.description,
+                    "TIMESTAMP": new Date().toISOString()
+                }
+            };
+            
+            mockSocket.send(JSON.stringify(message));
+            messagesSent++;
+            addLogEntry(`SEND: S5F1 Alarm - ${alarm.name}: ${alarm.description}`, 'send');
+            updateStats();
+        }
+        
+        function sendEtcherReport() {
+            if (!isConnected) {
+                addLogEntry('Cannot send report: Not connected', 'error');
+                return;
+            }
+            
+            const reportSelect = document.getElementById('reportSelect');
+            const reportId = parseInt(reportSelect.value);
+            const report = etcherReports[reportId];
+            
+            if (!report) {
+                addLogEntry('Invalid report selected', 'error');
+                return;
+            }
+            
+            // Build report data with VID values
+            const reportData = {
+                "DATAID": reportId,
+                "CEID": report.ceid,
+                "RPT": []
+            };
+            
+            // Add VID data to report
+            const rptData = [];
+            report.vids.forEach(vid => {
+                const vidData = etcherVIDs[vid];
+                if (vidData) {
+                    rptData.push({
+                        "VID": vid,
+                        "VNAME": vidData.name,
+                        "VVALUE": vidData.value,
+                        "VUNIT": vidData.unit
+                    });
+                }
+            });
+            
+            reportData.RPT = rptData;
+            reportData.TIMESTAMP = new Date().toISOString();
+            
+            const message = {
+                stream: 6,
+                function: 11,
+                wBit: false,
+                systemId: ++systemId,
+                data: reportData
+            };
+            
+            mockSocket.send(JSON.stringify(message));
+            messagesSent++;
+            addLogEntry(`SEND: S6F11 Report - ${report.name}`, 'send');
+            updateStats();
+        }
+        
+        function clearLog() {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = `
+                <div class="log-entry log-info">
+                    <span class="log-timestamp">[${new Date().toLocaleTimeString()}]</span> Log cleared
+                </div>
+            `;
+        }
+        
+        // Initialize preview on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            previewMessage();
+            updateStats();
+            
+            // Auto-update preview when inputs change
+            ['stream', 'function', 'wBit', 'messageData'].forEach(id => {
+                document.getElementById(id).addEventListener('input', previewMessage);
+                document.getElementById(id).addEventListener('change', previewMessage);
+            });
+        });
+    </script>
+</body>
+</html>
