@@ -1,0 +1,191 @@
+{
+    "templates": {
+        "S1": {
+            "name": "Status Data Messages",
+            "functions": {
+                "S1F1": {
+                    "name": "Are You There Request",
+                    "description": "Check equipment communication status",
+                    "direction": "H→E",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": null,
+                    "reply": {
+                        "function": 2,
+                        "name": "Are You There Response",
+                        "description": "Equipment communication status response",
+                        "data": {
+                            "MDLN": "Etcher_Model_EX300",
+                            "SOFTREV": "v3.2.1"
+                        }
+                    }
+                },
+                "S1F3": {
+                    "name": "Selected Equipment Status Request",
+                    "description": "Request specific equipment status variables",
+                    "direction": "H→E",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "SVID": [1001, 2001, 2007]
+                    },
+                    "reply": {
+                        "function": 4,
+                        "name": "Selected Equipment Status Data",
+                        "description": "Equipment status data response",
+                        "data": {
+                            "SV": [
+                                {"SVID": 1001, "SVNAME": "RF_POWER", "UNITS": "W"},
+                                {"SVID": 2001, "SVNAME": "CHAMBER_STATE", "UNITS": null},
+                                {"SVID": 2007, "SVNAME": "RECIPE_NAME", "UNITS": null}
+                            ]
+                        }
+                    }
+                },
+                "S1F11": {
+                    "name": "Status Variable Namelist Request",
+                    "description": "Request names of status variables",
+                    "direction": "H→E",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "SVID": [1001, 1002, 1003]
+                    },
+                    "reply": {
+                        "function": 12,
+                        "name": "Status Variable Namelist Reply",
+                        "description": "Status variable names and attributes",
+                        "data": {
+                            "SVID": [1001, 1002, 1003],
+                            "SVNAME": ["RF_POWER", "PRESSURE", "TEMPERATURE"],
+                            "UNITS": ["W", "mTorr", "°C"]
+                        }
+                    }
+                },
+                "S1F13": {
+                    "name": "Establish Communications Request",
+                    "description": "Initialize communication with equipment",
+                    "direction": "H→E",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "MDLN": "HostSystem",
+                        "SOFTREV": "1.0"
+                    },
+                    "reply": {
+                        "function": 14,
+                        "name": "Establish Communications Response",
+                        "description": "Communication establishment acknowledgment",
+                        "data": {
+                            "COMMACK": 0,
+                            "MDLN": "Etcher_Model_EX300",
+                            "SOFTREV": "v3.2.1"
+                        }
+                    }
+                }
+            }
+        },
+        "S2": {
+            "name": "Equipment Control Messages",
+            "functions": {
+                "S2F13": {
+                    "name": "Equipment Constants Request",
+                    "description": "Request equipment constant values",
+                    "direction": "H→E",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "ECID": [1, 2, 3]
+                    },
+                    "reply": {
+                        "function": 14,
+                        "name": "Equipment Constants Data",
+                        "description": "Equipment constant values response",
+                        "data": {
+                            "ECV": [
+                                {"ECID": 1, "ECNAME": "MAX_POWER", "VALUE": 2000},
+                                {"ECID": 2, "ECNAME": "MIN_PRESSURE", "VALUE": 10},
+                                {"ECID": 3, "ECNAME": "MAX_TEMP", "VALUE": 150}
+                            ]
+                        }
+                    }
+                },
+                "S2F15": {
+                    "name": "New Equipment Constants",
+                    "description": "Set new equipment constant values",
+                    "direction": "H→E",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "ECID": [1],
+                        "ECV": ["NewValue"]
+                    },
+                    "reply": {
+                        "function": 16,
+                        "name": "New Equipment Constants Acknowledge",
+                        "description": "Acknowledgment of constant value changes",
+                        "data": {
+                            "EAC": 0
+                        }
+                    }
+                }
+            }
+        },
+        "S5": {
+            "name": "Alarm Messages",
+            "functions": {
+                "S5F1": {
+                    "name": "Alarm Report Send",
+                    "description": "Report equipment alarm",
+                    "direction": "E→H",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "ALCD": 1,
+                        "ALID": 50001,
+                        "ALTX": "RF Power Supply Fault"
+                    },
+                    "reply": {
+                        "function": 2,
+                        "name": "Alarm Report Acknowledge",
+                        "description": "Alarm report acknowledgment",
+                        "data": {
+                            "ACKC5": 0
+                        }
+                    }
+                }
+            }
+        },
+        "S6": {
+            "name": "Data Collection Messages",
+            "functions": {
+                "S6F11": {
+                    "name": "Event Report Send",
+                    "description": "Report equipment event",
+                    "direction": "E→H",
+                    "wBit": true,
+                    "requiresReply": true,
+                    "data": {
+                        "DATAID": 1,
+                        "CEID": 10001,
+                        "RPT": [
+                            {
+                                "RPTID": 1,
+                                "VID": [1001, 1002, 1003],
+                                "V": [1500, 50.5, 65.2]
+                            }
+                        ]
+                    },
+                    "reply": {
+                        "function": 12,
+                        "name": "Event Report Acknowledge",
+                        "description": "Event report acknowledgment",
+                        "data": {
+                            "ACKC6": 0
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
